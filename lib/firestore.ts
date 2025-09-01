@@ -102,3 +102,6 @@ export const getDocumentsOrderedBy = async (
   }
   return getDocuments(collectionName, constraints);
 };
+
+// Export query functions for use in API routes
+export { where, orderBy, limit };
