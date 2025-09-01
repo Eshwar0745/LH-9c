@@ -1,229 +1,101 @@
-import type { Auth, User } from "firebase/auth"
-import type { UserProfile } from "@/lib/types"
-import { initializeApp, getApps } from "firebase/app"
-import { getFirestore, type Firestore } from "firebase/firestore"
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  getDoc,
-  doc,
-  setDoc,
-  serverTimestamp,
-} from "firebase/firestore"
-import {
-  GoogleAuthProvider,
-  signInWithPopup,
-  createUserWithEmailAndPassword,
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   sendEmailVerification,
-} from "firebase/auth"
+  sendPasswordResetEmail,
+  Auth,
+  User
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc,
+  serverTimestamp 
+} from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
-// ✅ Required env keys
-const requiredKeys = [
-  "NEXT_PUBLIC_FIREBASE_API_KEY",
-  "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-  "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-  "NEXT_PUBLIC_FIREBASE_APP_ID",
-] as const
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+};
 
-// ✅ Check missing keys
-const missingKeys = requiredKeys.filter((k) => !process.env[k])
-const hasEnv = missingKeys.length === 0
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
-if (!hasEnv) {
-  console.error("❌ Missing Firebase ENV variables:", missingKeys)
-}
+// Initialize Firebase services
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
 
-let __firebaseApp: any | undefined
-let __firestore: Firestore | undefined
-
-// ✅ Initialize Firestore
-export function getDb(): Firestore {
-  if (!__firebaseApp) {
-    if (!hasEnv) throw new Error("Firebase not configured")
-
-    const config = {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    }
-
-    console.log("✅ Initializing Firebase with config:", config)
-
-    __firebaseApp = getApps().length ? getApps()[0] : initializeApp(config)
-  }
-
-  if (!__firestore) {
-    __firestore = getFirestore(__firebaseApp)
-  }
-
-  return __firestore
-}
-
-// ✅ Central config loader
-async function getConfigured(): Promise<{
-  app: any
-  auth: Auth
-  db: Firestore
-} | null> {
-  if (!hasEnv) return null
-  const [{ getAuth }] = await Promise.all([import("firebase/auth")])
-
-  const config = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  }
-
-  console.log("✅ Firebase ENV Check", config)
-
-  const app = getApps().length ? getApps()[0] : initializeApp(config)
-  const auth = getAuth(app)
-  const db = getFirestore(app)
-  return { app, auth, db }
-}
-
-// ✅ Auth client
+// Firebase Client wrapper
 export const firebaseClient = {
-  isConfigured: hasEnv,
-
-  async getAuthClient() {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    return cfg.auth
+  async getAuthClient(): Promise<Auth> {
+    return auth;
   },
 
-  async signInWithEmail(email: string, password: string) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const cred = await signInWithEmailAndPassword(cfg.auth, email, password)
-    return cred.user
+  async signInWithEmail(email: string, password: string): Promise<User> {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result.user;
   },
 
-  async signUpWithEmail(email: string, password: string) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const cred = await createUserWithEmailAndPassword(cfg.auth, email, password)
-    return cred.user
+  async signUpWithEmail(email: string, password: string): Promise<User> {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    return result.user;
   },
 
-  async signInWithGoogle() {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const provider = new GoogleAuthProvider()
-    const cred = await signInWithPopup(cfg.auth, provider)
-    return cred.user
+  async signInWithGoogle(): Promise<User> {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    return result.user;
   },
 
-  async sendPasswordReset(email: string) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    await sendPasswordResetEmail(cfg.auth, email)
+  async sendEmailVerificationLink(user: User): Promise<void> {
+    await sendEmailVerification(user);
   },
 
-  async sendEmailVerificationLink(user: User) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    await sendEmailVerification(user)
-  },
-}
+  async sendPasswordReset(email: string): Promise<void> {
+    await sendPasswordResetEmail(auth, email);
+  }
+};
 
-// ✅ Firestore helpers
+// Firestore wrapper
 export const firestore = {
-  async upsertUserProfile(profile: UserProfile) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const ref = doc(cfg.db, "users", profile.uid)
-    await setDoc(
-      ref,
-      {
+  async upsertUserProfile(profile: {
+    uid: string;
+    email: string;
+    name: string;
+    role: string;
+  }): Promise<void> {
+    const userRef = doc(db, 'users', profile.uid);
+    
+    // Check if user already exists
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      // Update existing user
+      await setDoc(userRef, {
         ...profile,
-        createdAt: profile.createdAt || serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    )
-  },
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } else {
+      // Create new user
+      await setDoc(userRef, {
+        ...profile,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+  }
+};
 
-  async patchUserProfile(uid: string, data: Partial<UserProfile>) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const ref = doc(cfg.db, "users", uid)
-    await setDoc(
-      ref,
-      {
-        ...data,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    )
-  },
-
-  async getUserProfile(uid: string) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const ref = doc(cfg.db, "users", uid)
-    const snap = await getDoc(ref)
-    return snap.exists() ? (snap.data() as UserProfile) : null
-  },
-
-  async listBookingsByUser(uid: string) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const base = collection(cfg.db, "bookings")
-    const q = query(base, where("userId", "==", uid))
-    const snap = await getDocs(q)
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
-  },
-
-  async listBookingsByProvider(providerId: string) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const base = collection(cfg.db, "bookings")
-    const q = query(base, where("providerId", "==", providerId))
-    const snap = await getDocs(q)
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
-  },
-
-  async getBookingById(id: string) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const ref = doc(cfg.db, "bookings", id)
-    const snap = await getDoc(ref)
-    return snap.exists() ? { id: snap.id, ...(snap.data() as any) } : null
-  },
-
-  async listProviders(category?: string) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const base = collection(cfg.db, "users")
-    const q =
-      category && category.length
-        ? query(
-            base,
-            where("role", "==", "provider"),
-            where("categories", "array-contains", category),
-          )
-        : query(base, where("role", "==", "provider"))
-    const snap = await getDocs(q)
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))
-  },
-}
-
-// ✅ Storage helpers
-export const storage = {
-  async uploadFile(path: string, file: File) {
-    const cfg = await getConfigured()
-    if (!cfg) throw new Error("Firebase not configured")
-    const st = getStorage(cfg.app)
-    const r = ref(st, path)
-    await uploadBytes(r, file)
-    return await getDownloadURL(r)
-  },
-}
+export default app;

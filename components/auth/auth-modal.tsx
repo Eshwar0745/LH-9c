@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog } from "@headlessui/react"
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { firebaseClient } from "@/lib/firebase"
@@ -63,10 +63,10 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
       onClose={() => onOpenChange(false)}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     >
-      <Dialog.Panel className="w-full max-w-md rounded bg-white p-6">
-        <Dialog.Title className="text-lg font-semibold mb-4">
+      <DialogPanel className="w-full max-w-md rounded bg-white p-6">
+        <DialogTitle className="text-lg font-semibold mb-4">
           {isReset ? "Reset Password" : isSignUp ? "Join Now" : "Sign In"}
-        </Dialog.Title>
+        </DialogTitle>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           {isSignUp && !isReset && (
@@ -147,7 +147,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             Back to Sign In
           </button>
         )}
-      </Dialog.Panel>
+      </DialogPanel>
     </Dialog>
   )
 }

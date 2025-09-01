@@ -9,9 +9,9 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let unsubscribe: any
+    let unsubscribe: (() => void) | undefined
     firebaseClient.getAuthClient().then((auth) => {
-      unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+      unsubscribe = auth.onAuthStateChanged(async (firebaseUser: User | null) => {
         setUser(firebaseUser)
         setLoading(false)
 
