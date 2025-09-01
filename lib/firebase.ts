@@ -37,6 +37,9 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
+// Export getDb function for compatibility
+export const getDb = () => db;
+
 // Firebase Client wrapper
 export const firebaseClient = {
   async getAuthClient(): Promise<Auth> {
@@ -94,6 +97,43 @@ export const firestore = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+    }
+  },
+
+  async getBookingById(bookingId: string) {
+    try {
+      const bookingRef = doc(db, 'bookings', bookingId);
+      const bookingSnap = await getDoc(bookingRef);
+      
+      if (bookingSnap.exists()) {
+        return { id: bookingSnap.id, ...bookingSnap.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting booking:', error);
+      return null;
+    }
+  },
+
+  async listBookingsByUser(userId: string) {
+    try {
+      // This is a simplified implementation for now
+      // In a real app, you'd query the bookings collection
+      return [];
+    } catch (error) {
+      console.error('Error listing bookings:', error);
+      return [];
+    }
+  },
+
+  async listBookingsByProvider(providerId: string) {
+    try {
+      // This is a simplified implementation for now
+      // In a real app, you'd query the bookings collection
+      return [];
+    } catch (error) {
+      console.error('Error listing provider bookings:', error);
+      return [];
     }
   }
 };
