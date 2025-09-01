@@ -1,0 +1,254 @@
+openapi: 3.0.3
+info:
+  title: Local Hands API
+  version: 1.0.0
+  description: |-
+    OpenAPI specification for the Local Hands marketplace backend. This covers all endpoints, authentication, RBAC, and error responses.
+servers:
+  - url: /api
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    PageParam:
+      in: query
+      name: page
+      schema:
+        type: integer
+        default: 1
+    LimitParam:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        default: 10
+    SortByParam:
+      in: query
+      name: sortBy
+      schema:
+        type: string
+        default: createdAt
+    SortOrderParam:
+      in: query
+      name: sortOrder
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+    SearchParam:
+      in: query
+      name: search
+      schema:
+        type: string
+    TagsParam:
+      in: query
+      name: tags
+      schema:
+        type: string
+        description: Comma-separated list of tags
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: Insufficient role/permission
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string
+    User:
+      type: object
+      properties:
+        uid:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        avatar:
+          type: string
+        phone:
+          type: string
+        address:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+        emailVerified:
+          type: boolean
+        businessName:
+          type: string
+        experience:
+          type: number
+        services:
+          type: array
+          items:
+            type: string
+        hourlyRate:
+          type: number
+        availability:
+          type: object
+        rating:
+          type: number
+        reviewCount:
+          type: number
+    Service:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        providerId:
+          type: string
+        providerName:
+          type: string
+        price:
+          type: number
+        priceType:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        location:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        rating:
+          type: number
+        reviewCount:
+          type: number
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                name:
+                  type: string
+                phone:
+                  type: string
+                role:
+                  type: string
+                  enum: [customer, provider, admin]
+                businessName:
+                  type: string
+                experience:
+                  type: number
+      responses:
+        '201':
+          description: User registered
+        '400':
+          $ref: '#/components/responses/UnauthorizedError'
+  /auth/login:
+    post:
+      summary: Login (client-side only)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '501':
+          description: Not implemented (use client SDK)
+  /services:
+    get:
+      summary: List/search/filter services
+      tags: [Services]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/TagsParam'
+      responses:
+        '200':
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Service'
+                  meta:
+                    type: object
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /admin/users:
+    get:
+      summary: List all users (admin only)
+      tags: [Admin]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
