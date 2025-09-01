@@ -29,6 +29,7 @@ export type Category =
 export interface UserProfile {
   uid: string
   role: UserRole
+  email: string   
   name?: string
   phone?: string
   address?: string
