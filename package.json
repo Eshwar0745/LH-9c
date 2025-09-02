@@ -50,6 +50,7 @@
     "d3-ease": "^3.0.1",
     "d3-interpolate": "^3.0.1",
     "d3-scale": "^4.0.2",
+    "dataconnect-generated": "link:../../../AppData/Local/pnpm/global/5/node_modules/src/dataconnect-generated",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
     "firebase": "^12.2.1",
